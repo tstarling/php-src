@@ -102,7 +102,7 @@ MYSQLND_METHOD(mysqlnd_error_info, reset)(MYSQLND_ERROR_INFO * const info)
 
 	info->error_no = 0;
 	info->error[0] = '\0';
-	memset(info->sqlstate, 0, sizeof(info->sqlstate));
+	memset(&info->sqlstate, 0, sizeof(info->sqlstate));
 	if (info->error_list) {
 		zend_llist_clean(info->error_list);
 	}
@@ -409,11 +409,8 @@ MYSQLND_METHOD(mysqlnd_conn_data, restart_psession)(MYSQLND_CONN_DATA * conn)
 {
 	DBG_ENTER("mysqlnd_conn_data::restart_psession");
 	MYSQLND_INC_CONN_STATISTIC(conn->stats, STAT_CONNECT_REUSED);
-	/* Free here what should not be seen by the next script */
-	if (conn->last_message.s) {
-		mnd_pefree(conn->last_message.s, conn->persistent);
-		conn->last_message.s = NULL;
-	}
+	conn->current_result = NULL;
+	conn->last_message.s = NULL;
 	DBG_RETURN(PASS);
 }
 /* }}} */
@@ -424,6 +421,16 @@ static enum_func_status
 MYSQLND_METHOD(mysqlnd_conn_data, end_psession)(MYSQLND_CONN_DATA * conn)
 {
 	DBG_ENTER("mysqlnd_conn_data::end_psession");
+	/* Free here what should not be seen by the next script */
+	if (conn->current_result) {
+		conn->current_result->m.free_result(conn->current_result, TRUE);
+		conn->current_result = NULL;
+	}
+	if (conn->last_message.s) {
+		mnd_efree(conn->last_message.s);
+		conn->last_message.s = NULL;
+	}
+	conn->error_info = &conn->error_info_impl;
 	DBG_RETURN(PASS);
 }
 /* }}} */
@@ -2337,7 +2344,7 @@ MYSQLND_METHOD(mysqlnd_conn_data, stmt_init)(MYSQLND_CONN_DATA * const conn)
 {
 	MYSQLND_STMT * ret;
 	DBG_ENTER("mysqlnd_conn_data::stmt_init");
-	ret = conn->object_factory.get_prepared_statement(conn, conn->persistent);
+	ret = conn->object_factory.get_prepared_statement(conn);
 	DBG_RETURN(ret);
 }
 /* }}} */
