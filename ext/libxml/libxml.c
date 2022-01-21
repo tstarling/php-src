@@ -224,21 +224,9 @@ static PHP_GINIT_FUNCTION(libxml)
 	ZVAL_UNDEF(&libxml_globals->stream_context);
 	libxml_globals->error_buffer.s = NULL;
 	libxml_globals->error_list = NULL;
-	ZVAL_UNDEF(&libxml_globals->entity_loader.object);
+	ZVAL_NULL(&libxml_globals->entity_loader.callback);
 	libxml_globals->entity_loader.fci.size = 0;
 	libxml_globals->entity_loader_disabled = 0;
-}
-
-static void _php_libxml_destroy_fci(zend_fcall_info *fci, zval *object)
-{
-	if (fci->size > 0) {
-		zval_ptr_dtor(&fci->function_name);
-		fci->size = 0;
-	}
-	if (!Z_ISUNDEF_P(object)) {
-		zval_ptr_dtor(object);
-		ZVAL_UNDEF(object);
-	}
 }
 
 /* Channel libxml file io layer through the PHP streams subsystem.
@@ -921,8 +909,12 @@ static PHP_RINIT_FUNCTION(libxml)
 
 static PHP_RSHUTDOWN_FUNCTION(libxml)
 {
-	_php_libxml_destroy_fci(&LIBXML(entity_loader).fci, &LIBXML(entity_loader).object);
-
+	LIBXML(entity_loader).fci.size = 0;
+	if (!Z_ISNULL(LIBXML(entity_loader).callback)) {
+		zval_ptr_dtor_nogc(&LIBXML(entity_loader).callback);
+		ZVAL_NULL(&LIBXML(entity_loader).callback);
+	}
+	
 	return SUCCESS;
 }
 
@@ -1138,29 +1130,36 @@ PHP_FUNCTION(libxml_disable_entity_loader)
 }
 /* }}} */
 
-/* {{{ Changes the default external entity loader */
+/* {{{ Change the default external entity loader and return the previous loader */
 PHP_FUNCTION(libxml_set_external_entity_loader)
 {
+	zval 					*callback;
 	zend_fcall_info			fci;
-	zend_fcall_info_cache	fcc;
+	zend_fcall_info_cache 	fcc;
+	char *error = NULL;
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
-		Z_PARAM_FUNC_OR_NULL(fci, fcc)
+		Z_PARAM_ZVAL(callback)
 	ZEND_PARSE_PARAMETERS_END();
 
-	_php_libxml_destroy_fci(&LIBXML(entity_loader).fci, &LIBXML(entity_loader).object);
-
-	if (ZEND_FCI_INITIALIZED(fci)) { /* argument not null */
-		LIBXML(entity_loader).fci = fci;
-		Z_ADDREF(fci.function_name);
-		if (fci.object != NULL) {
-			ZVAL_OBJ(&LIBXML(entity_loader).object, fci.object);
-			Z_ADDREF(LIBXML(entity_loader).object);
+	if (Z_ISNULL_P(callback)) {
+		LIBXML(entity_loader).fci.size = 0;
+	} else {
+		fci.size = sizeof(fci);
+		fci.object = NULL;
+		fci.named_params = NULL;
+		if (zend_fcall_info_init(callback, 0, &fci, &fcc, NULL, &error) != SUCCESS) {
+			zend_argument_type_error(0, "must be a valid callback or NULL, %s", error);
+			RETURN_FALSE;
 		}
+		LIBXML(entity_loader).fci = fci;
 		LIBXML(entity_loader).fcc = fcc;
 	}
-
-	RETURN_TRUE;
+	ZVAL_COPY(return_value, &LIBXML(entity_loader).callback);
+	if (!Z_ISNULL(LIBXML(entity_loader).callback)) {
+		zval_ptr_dtor_nogc(&LIBXML(entity_loader).callback);
+	}
+	ZVAL_COPY(&LIBXML(entity_loader).callback, callback);
 }
 /* }}} */
 

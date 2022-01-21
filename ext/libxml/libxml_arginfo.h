@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 1cc89432b61dc1997afe96e02f82a8fd1a6fcfc4 */
+ * Stub hash: dacf72d6f70131058663e8b09c4b83c9e03a43ee */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_libxml_set_streams_context, 0, 1, IS_VOID, 0)
 	ZEND_ARG_INFO(0, context)
@@ -22,7 +22,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_libxml_disable_entity_loader, 0,
 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, disable, _IS_BOOL, 0, "true")
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_libxml_set_external_entity_loader, 0, 1, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_libxml_set_external_entity_loader, 0, 1, MAY_BE_CALLABLE|MAY_BE_BOOL|MAY_BE_NULL)
 	ZEND_ARG_TYPE_INFO(0, resolver_function, IS_CALLABLE, 1)
 ZEND_END_ARG_INFO()
 
