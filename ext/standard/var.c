@@ -758,6 +758,7 @@ static int php_var_serialize_call_sleep(zval *retval, zval *struc) /* {{{ */
 }
 /* }}} */
 
+#if 0 && T316601
 static int php_var_serialize_call_magic_serialize(zval *retval, zval *obj) /* {{{ */
 {
 	zval fname;
@@ -783,6 +784,7 @@ static int php_var_serialize_call_magic_serialize(zval *retval, zval *obj) /* {{
 	return SUCCESS;
 }
 /* }}} */
+#endif
 
 static int php_var_serialize_try_add_sleep_prop(
 		HashTable *ht, HashTable *props, zend_string *name, zend_string *error_name, zval *struc) /* {{{ */
@@ -1012,6 +1014,7 @@ again:
 				zend_bool incomplete_class;
 				uint32_t count;
 
+#if 0 && T316601
 				if (zend_hash_str_exists(&ce->function_table, "__serialize", sizeof("__serialize")-1)) {
 					zval retval, obj;
 					zend_string *key;
@@ -1049,7 +1052,8 @@ again:
 					zval_ptr_dtor(&retval);
 					return;
 				}
-
+#endif
+				
 				if (ce->serialize != NULL) {
 					/* has custom handler */
 					unsigned char *serialized_data = NULL;
