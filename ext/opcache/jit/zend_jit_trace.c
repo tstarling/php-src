@@ -8591,17 +8591,6 @@ int ZEND_FASTCALL zend_jit_trace_exit(uint32_t exit_num, zend_jit_registers_buf 
 		EX(opline) = opline;
 	}
 
-	if (zend_atomic_bool_load_ex(&EG(vm_interrupt)) || JIT_G(tracing)) {
-		return 1;
-	/* Lock-free check if the side trace was already JIT-ed or blacklist-ed in another process */
-	} else if (t->exit_info[exit_num].flags & (ZEND_JIT_EXIT_JITED|ZEND_JIT_EXIT_BLACKLISTED)) {
-		return 0;
-	}
-
-	ZEND_ASSERT(EX(func)->type == ZEND_USER_FUNCTION);
-	ZEND_ASSERT(EX(opline) >= EX(func)->op_array.opcodes &&
-		EX(opline) < EX(func)->op_array.opcodes + EX(func)->op_array.last);
-
 	if (JIT_G(debug) & ZEND_JIT_DEBUG_TRACE_EXIT) {
 		fprintf(stderr, "     TRACE %d exit %d %s%s%s() %s:%d\n",
 			trace_num,
@@ -8613,6 +8602,17 @@ int ZEND_FASTCALL zend_jit_trace_exit(uint32_t exit_num, zend_jit_registers_buf 
 			ZSTR_VAL(EX(func)->op_array.filename),
 			EX(opline)->lineno);
 	}
+
+	if (zend_atomic_bool_load_ex(&EG(vm_interrupt)) || JIT_G(tracing)) {
+		return 1;
+	/* Lock-free check if the side trace was already JIT-ed or blacklist-ed in another process */
+	} else if (t->exit_info[exit_num].flags & (ZEND_JIT_EXIT_JITED|ZEND_JIT_EXIT_BLACKLISTED)) {
+		return 0;
+	}
+
+	ZEND_ASSERT(EX(func)->type == ZEND_USER_FUNCTION);
+	ZEND_ASSERT(EX(opline) >= EX(func)->op_array.opcodes &&
+		EX(opline) < EX(func)->op_array.opcodes + EX(func)->op_array.last);
 
 	if (t->exit_info[exit_num].flags & ZEND_JIT_EXIT_INVALIDATE) {
 		zend_jit_op_array_trace_extension *jit_extension;
